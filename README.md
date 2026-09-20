@@ -57,6 +57,6 @@ daemon-gui/
 
 ## 环境约定
 
-- `bsk` 可执行文件：优先从 PATH 查找，其次 `E:\DevTools\bsk\bsk.exe`、`C:\Users\Administrator\.local\bin\bsk.exe`。
-- daemon 数据目录 `BSK_HOME`：优先读环境变量，默认 `E:\DevTools\bsk\home`。
+- `bsk` 可执行文件：优先从 PATH 查找，其次 `~/.local/bin/bsk.exe`（按当前用户动态解析）、`E:\DevTools\bsk\bsk.exe`、`C:\Users\Administrator\.local\bin\bsk.exe`。
+- daemon 数据目录 `BSK_HOME`：仅在环境变量显式设置时覆盖，否则交给 bsk 走默认（`~/.bsk`）。
 - 状态查询始终带 `BSK_AUTO_START=0`，避免查询时隐式拉起 daemon 导致「未启动」被误判。
