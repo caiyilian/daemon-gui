@@ -2,6 +2,9 @@
 
 管理 BrowserSkill（bsk）的本地 daemon。daemon 是让浏览器扩展连接、
 复用已登录浏览器会话的后台服务。
+
+所有对 bsk 的子进程调用都带 CREATE_NO_WINDOW，避免在 GUI（无控制台）
+环境下弹出黑框；启动 daemon 用 Popen 异步触发，避免阻塞 GUI 主线程。
 """
 
 import json
@@ -11,6 +14,9 @@ import subprocess
 
 # daemon 数据目录（优先读环境变量，其次用用户默认安装位置）
 BSK_HOME = os.environ.get("BSK_HOME", r"E:\DevTools\bsk\home")
+
+# Windows 上隐藏子进程控制台窗口的标志
+CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 # bsk 可执行文件的候选路径（按优先级）
 _BSK_CANDIDATES = [
@@ -57,6 +63,7 @@ def status():
             text=True,
             env=_env(),
             timeout=5,
+            creationflags=CREATE_NO_WINDOW,
         )
         if r.returncode == 0:
             data = json.loads(r.stdout)
@@ -69,21 +76,24 @@ def status():
 
 
 def start():
-    """启动 daemon（后台独立运行，不阻塞）。
+    """异步触发 daemon 启动（后台 breakaway，立即返回）。
+
+    用 Popen + DEVNULL 而非 run+PIPE：bsk daemon start 的后台 daemon 会继承
+    stdout/stderr 管道导致 run 一直等 EOF 而阻塞，改用 Popen 立即返回。
+    真正的启动结果由调用方随后通过 status() 确认。
 
     返回 (ok, message)。
     """
     try:
-        r = subprocess.run(
+        subprocess.Popen(
             [_find_bsk(), "daemon", "start"],
-            capture_output=True,
-            text=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             env=_env(),
-            timeout=30,
+            creationflags=CREATE_NO_WINDOW,
         )
-        msg = (r.stdout or r.stderr).strip()
-        return r.returncode == 0, msg
-    except (subprocess.TimeoutExpired, OSError) as e:
+        return True, ""
+    except OSError as e:
         return False, str(e)
 
 
@@ -98,7 +108,8 @@ def stop():
             capture_output=True,
             text=True,
             env=_env(),
-            timeout=30,
+            timeout=15,
+            creationflags=CREATE_NO_WINDOW,
         )
         msg = (r.stdout or r.stderr).strip()
         return r.returncode == 0, msg

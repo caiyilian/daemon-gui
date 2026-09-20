@@ -89,6 +89,11 @@ class MainWindow(QWidget):
         ok, msg = daemon.start()
         if not ok and msg:
             self.detail_label.setText(f"开启失败：{msg[:120]}")
+        else:
+            self.detail_label.setText("正在开启服务…")
+            QTimer.singleShot(1500, self._refresh_after_start)
+
+    def _refresh_after_start(self):
         self.apply_state(*daemon.status())
 
     def on_stop(self):
