@@ -136,7 +136,7 @@ class TrayApp:
         self.stop_action = QAction("停止服务")
         self.autostart_action = QAction("开机自启")
         self.autostart_action.setCheckable(True)
-        self.show_action = QAction("显示主窗口")
+        self.show_action = QAction("打开界面")
         self.quit_action = QAction("退出")
 
         self.menu.addAction(self.status_action)
@@ -212,7 +212,7 @@ def main():
     app.setQuitOnLastWindowClosed(False)
 
     window = MainWindow()
-    TrayApp(app, window)
+    tray = TrayApp(app, window)  # 必须保存引用，否则实例被 GC、托盘信号槽全部失效
 
     window.show()
     sys.exit(app.exec())
