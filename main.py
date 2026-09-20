@@ -49,7 +49,7 @@ def _build_icons():
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Daemon GUI")
+        self.setWindowTitle("Daemon 服务管理")
         self.resize(340, 170)
 
         self.status_label = QLabel("状态：未知")
@@ -59,8 +59,8 @@ class MainWindow(QWidget):
         self.detail_label.setStyleSheet("color: #888;")
         self.detail_label.setWordWrap(True)
 
-        self.start_btn = QPushButton("启动 daemon")
-        self.stop_btn = QPushButton("停止 daemon")
+        self.start_btn = QPushButton("开启服务")
+        self.stop_btn = QPushButton("停止服务")
 
         self.autostart_cb = QCheckBox("开机自启")
 
@@ -88,7 +88,7 @@ class MainWindow(QWidget):
     def on_start(self):
         ok, msg = daemon.start()
         if not ok and msg:
-            self.detail_label.setText(f"启动失败：{msg[:120]}")
+            self.detail_label.setText(f"开启失败：{msg[:120]}")
         self.apply_state(*daemon.status())
 
     def on_stop(self):
@@ -127,8 +127,8 @@ class TrayApp:
         self.menu = QMenu()
         self.status_action = QAction("状态：未启动")
         self.status_action.setEnabled(False)
-        self.start_action = QAction("启动 daemon")
-        self.stop_action = QAction("停止 daemon")
+        self.start_action = QAction("开启服务")
+        self.stop_action = QAction("停止服务")
         self.autostart_action = QAction("开机自启")
         self.autostart_action.setCheckable(True)
         self.show_action = QAction("显示主窗口")
