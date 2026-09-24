@@ -18,14 +18,15 @@ import os
 import shutil
 import subprocess
 
-# daemon 数据目录（优先读环境变量，其次用用户默认安装位置）
-BSK_HOME = os.environ.get("BSK_HOME", r"E:\DevTools\bsk\home")
+# daemon 数据目录：仅在用户显式设置 BSK_HOME 时覆盖，否则交给 bsk 走默认（~/.bsk）
+BSK_HOME = os.environ.get("BSK_HOME")
 
 # Windows 上隐藏子进程控制台窗口的标志
 CREATE_NO_WINDOW = 0x08000000 if os.name == "nt" else 0
 
 # bsk 可执行文件的候选路径（按优先级）
 _BSK_CANDIDATES = [
+    os.path.join(os.path.expanduser("~"), ".local", "bin", "bsk.exe"),
     r"E:\DevTools\bsk\bsk.exe",
     r"C:\Users\Administrator\.local\bin\bsk.exe",
 ]
@@ -47,9 +48,10 @@ def _find_bsk() -> str:
 
 
 def _base_env() -> dict:
-    """基础子进程环境：带上 BSK_HOME（daemon 与查询命令必须指向同一目录）。"""
+    """基础子进程环境：仅在显式设置 BSK_HOME 时覆盖，否则交给 bsk 走默认（~/.bsk）。"""
     env = os.environ.copy()
-    env["BSK_HOME"] = BSK_HOME
+    if BSK_HOME:
+        env["BSK_HOME"] = BSK_HOME
     return env
 
 
