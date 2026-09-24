@@ -89,12 +89,38 @@ class MainWindow(QWidget):
         ok, msg = daemon.start()
         if not ok and msg:
             self.detail_label.setText(f"开启失败：{msg[:120]}")
-        else:
-            self.detail_label.setText("正在开启服务…")
-            QTimer.singleShot(1500, self._refresh_after_start)
+            return
+        self.detail_label.setText("正在开启服务…")
+        self._start_retry = 0
+        self._supervised = False
+        QTimer.singleShot(1500, self._refresh_after_start)
 
     def _refresh_after_start(self):
-        self.apply_state(*daemon.status())
+        """启动后确认状态；daemon 初始化需要时间，最多重试 3 次。"""
+        running, info = daemon.status()
+        if running:
+            self.apply_state(running, info)
+            return
+
+        self._start_retry += 1
+        if self._start_retry < 3:
+            QTimer.singleShot(2000, self._refresh_after_start)
+            return
+
+        # 一级启动（独立进程）失败 → 回退到受管 foreground 模式
+        if not self._supervised:
+            self._supervised = True
+            ok, msg = daemon.start_supervised()
+            if not ok and msg:
+                self.detail_label.setText(f"开启失败：{msg[:120]}")
+                return
+            self.detail_label.setText("正在以受管模式开启服务…")
+            self._start_retry = 0
+            QTimer.singleShot(2000, self._refresh_after_start)
+            return
+
+        # 两级都失败
+        self.apply_state(False, info)
 
     def on_stop(self):
         ok, msg = daemon.stop()
@@ -111,10 +137,8 @@ class MainWindow(QWidget):
             pid = info.get("pid", "?")
             browsers = info.get("browsers", [])
             self.detail_label.setText(f"daemon pid {pid} · 已连接浏览器 {len(browsers)}")
-        elif not running and isinstance(info, dict) and info.get("error"):
-            self.detail_label.setText(str(info["error"])[:120])
         else:
-            self.detail_label.setText("")
+            self.detail_label.setText("服务未运行，点击「开启服务」启动")
         self.start_btn.setEnabled(not running)
         self.stop_btn.setEnabled(running)
 
@@ -203,6 +227,13 @@ class TrayApp:
         self.window.apply_state(running, info)
 
     def quit(self):
+        # 仅当 daemon 是本程序以受管（foreground）模式持有的时候，退出时才一并停掉；
+        # 独立进程模式的 daemon 可自行存活，退出 GUI 不影响它。
+        if daemon.has_supervised_daemon():
+            try:
+                daemon.stop()
+            except Exception:
+                pass
         self.tray.hide()
         self.app.quit()
 

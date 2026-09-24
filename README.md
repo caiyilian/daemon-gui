@@ -60,3 +60,12 @@ daemon-gui/
 - `bsk` 可执行文件：优先从 PATH 查找，其次 `E:\DevTools\bsk\bsk.exe`、`C:\Users\Administrator\.local\bin\bsk.exe`。
 - daemon 数据目录 `BSK_HOME`：优先读环境变量，默认 `E:\DevTools\bsk\home`。
 - 状态查询始终带 `BSK_AUTO_START=0`，避免查询时隐式拉起 daemon 导致「未启动」被误判。
+
+## 启动策略（适配 bsk 0.3.1+）
+
+bsk 0.3.1 起，`bsk daemon start` 的后台 breakaway 模式在部分 Windows 环境（受 Job Object 或安全软件限制）会报「拒绝访问 (os error 5)」而失败。为此本工具采用**两级启动**：
+
+1. **一级：独立进程启动** —— 先尝试标准 `bsk daemon start`，成功则 daemon 完全独立，关闭本程序也不影响它；
+2. **二级：受管模式回退** —— 一级失败时，自动改用 `bsk daemon start --foreground`，由本程序持有 daemon 子进程。该方式不依赖 breakaway 权限，受限环境下仍可用。
+
+> 注意：受管模式下 daemon 依附于本程序，**退出程序会一并停止服务**；独立模式下退出程序不影响 daemon。程序会按实际情况自动选择，无需手动干预。
