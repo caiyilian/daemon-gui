@@ -56,9 +56,19 @@ def _base_env() -> dict:
 
 
 def _query_env() -> dict:
-    """查询用环境：额外禁用隐式自动启动，保证「未启动」状态被如实反映。"""
+    """查询用环境：禁用隐式自动启动 + 关闭浏览器连接等待。
+
+    两个变量各有明确用途：
+      - BSK_AUTO_START=0    禁用隐式自动启动，保证「未启动」状态被如实反映；
+      - BSK_BROWSER_WAIT_MS=0  关闭 bsk status 默认的「等待浏览器扩展连接」逻辑。
+
+    第二项是必须的：bsk 的 status 默认最多阻塞 5 秒（等扩展连上），
+    而本 GUI 的查询超时与此重叠，导致「daemon 正常但扩展恰好掉线」时
+    被误判为「未启动 / 超时」。GUI 只需要 daemon 是否存活，不需要等浏览器。
+    """
     env = _base_env()
     env["BSK_AUTO_START"] = "0"
+    env["BSK_BROWSER_WAIT_MS"] = "0"  # 不等待浏览器，只取即时快照
     return env
 
 
@@ -75,7 +85,7 @@ def status():
             capture_output=True,
             text=True,
             env=_query_env(),
-            timeout=5,
+            timeout=8,
             creationflags=CREATE_NO_WINDOW,
         )
         if r.returncode == 0:

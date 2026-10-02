@@ -136,7 +136,16 @@ class MainWindow(QWidget):
         if running and isinstance(info, dict):
             pid = info.get("pid", "?")
             browsers = info.get("browsers", [])
-            self.detail_label.setText(f"daemon pid {pid} · 已连接浏览器 {len(browsers)}")
+            if browsers:
+                names = "、".join(
+                    (b.get("browser_name") or "浏览器") for b in browsers
+                )
+                self.detail_label.setText(f"daemon pid {pid} · 已连接：{names}")
+            else:
+                # daemon 正常，只是扩展暂时没连上（浏览器/扩展还没起来是常见情况）
+                self.detail_label.setText(
+                    f"daemon pid {pid} · 浏览器未连接（打开浏览器后会自动连上）"
+                )
         else:
             self.detail_label.setText("服务未运行，点击「开启服务」启动")
         self.start_btn.setEnabled(not running)
